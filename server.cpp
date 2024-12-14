@@ -229,7 +229,7 @@ class Server {
 
             sockaddr_in serverAddress;
             serverAddress.sin_family = AF_INET;
-            serverAddress.sin_port = xxxx;
+            serverAddress.sin_port = 3490;
             serverAddress.sin_addr.s_addr = INADDR_ANY;
 
             bind(serverSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress));

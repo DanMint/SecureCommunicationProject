@@ -23,13 +23,9 @@ int main() {
 
     sockaddr_in serverAddress;
     serverAddress.sin_family = AF_INET;
-<<<<<<< HEAD
     serverAddress.sin_port = 3490;
     inet_pton(AF_INET, "192.168.1.177", &serverAddress.sin_addr);
-=======
-    serverAddress.sin_port = xxxx;
-    inet_pton(AF_INET, "xxx.xxx.xxx.xxx" , &serverAddress.sin_addr);
->>>>>>> origin/main
+
 
     if (connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) {
         std::cerr << "Error connecting to server" << std::endl;
