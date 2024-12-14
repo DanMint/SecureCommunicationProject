@@ -1,114 +1,179 @@
 #include <iostream>
-#include <vector>
+#include <cstring>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <unordered_map>
+#include <cassert>
+#include <arpa/inet.h>
+#include <any>
+#include <variant>
+#include <memory>
 
-class MyCircularQueue {
-    private:   
-       std::vector<int*> circularQueue;
-       int start;
-       int end;
-       int size;
-       
+class Message {
+    private:
+        std::unique_ptr<int> type;
+        std::unique_ptr<int> size;
+        using MessageData = std::variant<
+                            std::unique_ptr<int []>,
+                            std::unique_ptr<char []>,
+                            std::unique_ptr<double []>,
+                            std::unique_ptr<int>,
+                            std::unique_ptr<char>,
+                            std::unique_ptr<double>
+                            >;
+
+        MessageData message;
 
     public:
-        MyCircularQueue(int k) {
-            size = k;
-            start = -1;
-            end = -1;
-
-            for (int i = 0; i < size; i ++) 
-                circularQueue.push_back(nullptr);
+        Message() {
+            type = nullptr;
+            size = nullptr;
         }
-        
-        bool enQueue(int value) {
-            if (!isFull()) {
-                if (start == -1 && end == -1) 
-                    start = 0;
-                    
-                if (end <= size - 2 && circularQueue[end + 1] == nullptr) {
-                    end  += 1;
-                    circularQueue[end] = new int(value);
+
+        Message(const int type, const int size, std::unique_ptr<int []> message) {
+            this->type = std::make_unique<int>(type);
+            this->size = std::make_unique<int>(size);
+            this->message = std::move(message);
+        }
+
+        Message(const int type, const int size, std::unique_ptr<char []> message) {
+            this->type = std::make_unique<int>(type);
+            this->size = std::make_unique<int>(size);
+            this->message = std::move(message);
+        }
+
+        Message(const int type, const int size, std::unique_ptr<double []> message) {
+            this->type = std::make_unique<int>(type);
+            this->size = std::make_unique<int>(size);
+            this->message = std::move(message);
+        }
+
+        Message(const int type, const int size, std::unique_ptr<int> message) {
+            this->type = std::make_unique<int>(type);
+            this->size = std::make_unique<int>(size);
+            this->message = std::move(message);
+        }
+
+        Message(const int type, const int size, std::unique_ptr<char> message) {
+            this->type = std::make_unique<int>(type);
+            this->size = std::make_unique<int>(size);
+            this->message = std::move(message);
+        }
+
+        Message(const int type, const int size, std::unique_ptr<double> message) {
+            this->type = std::make_unique<int>(type);
+            this->size = std::make_unique<int>(size);
+            this->message = std::move(message);
+        }
+
+        int getType() {
+            return *type;
+        }
+
+        void setType(const int type) {
+            if (this->type == nullptr) 
+                this->type = std::make_unique<int>(type);
+            else 
+                *this->type = type;
+        }
+
+        int getSize() {
+            return *size;
+        }
+
+        void setSize(const int size) {
+            if (this->size == nullptr)
+                this->size = std::make_unique<int>(size);
+            else 
+                *this->size = size;
+        }
+
+        MessageData getMessage() {
+            if (std::holds_alternative<std::unique_ptr<int[]>>(message)) {
+                const int* arr = std::get<std::unique_ptr<int[]>>(message).get();
+                auto newArray = std::make_unique<int[]>(*size);
+                for (int i = 0; i < *size; ++i) {
+                    newArray[i] = arr[i];
                 }
-                else {
-                    if (circularQueue[0] == nullptr) {
-                        end  = 0;
-                        circularQueue[end] = new int(value);
-                    }
+                return MessageData(std::move(newArray));
+
+            } 
+            else if (std::holds_alternative<std::unique_ptr<char[]>>(message)) {
+                const char* arr = std::get<std::unique_ptr<char[]>>(message).get();
+                auto newArray = std::make_unique<char[]>(*size);
+                for (int i = 0; i < *size; ++i) {
+                    newArray[i] = arr[i];
                 }
-                return true;
-            }
-            return false;
-        }
-        
-        bool deQueue() {
-            if (!isEmpty()) {
-                if (start <= size - 2) {
-                    circularQueue[start] = nullptr;
-                    start += 1;
+                return MessageData(std::move(newArray));
+
+            } 
+            else if (std::holds_alternative<std::unique_ptr<double[]>>(message)) {
+                const double* arr = std::get<std::unique_ptr<double[]>>(message).get();
+                auto newArray = std::make_unique<double[]>(*size);
+                for (int i = 0; i < *size; ++i) {
+                    newArray[i] = arr[i];
                 }
-                else {
-                    circularQueue[start] = nullptr;
-                    start = 0;
-                }
-                return true;
+                return MessageData(std::move(newArray));
+
+            } 
+            else if (std::holds_alternative<std::unique_ptr<int>>(message)) {
+                int val = *std::get<std::unique_ptr<int>>(message).get();
+                auto newVal = std::make_unique<int>(val);
+                return MessageData(std::move(newVal));
+
+            } 
+            else if (std::holds_alternative<std::unique_ptr<char>>(message)) {
+                char val = *std::get<std::unique_ptr<char>>(message).get();
+                auto newVal = std::make_unique<char>(val);
+                return MessageData(std::move(newVal));
+
+            } 
+            else if (std::holds_alternative<std::unique_ptr<double>>(message)) {
+                double val = *std::get<std::unique_ptr<double>>(message).get();
+                auto newVal = std::make_unique<double>(val);
+                return MessageData(std::move(newVal));
             }
 
-            return false;
-        }
-        
-        int Front() {
-            if (circularQueue[start] == nullptr)
-                return -1;
-
-            return *circularQueue[start];
-        }
-        
-        int Rear() {
-            if (circularQueue[end] == nullptr)
-                return -1;
-
-            return *circularQueue[end];
-        }
-        
-        bool isEmpty() {
-            for (const auto &el : circularQueue) {
-                if (el != nullptr)
-                    return false;
-            }
-
-            return true;
-        }
-        
-        bool isFull() {
-            for (const auto &el : circularQueue) {
-                if (el == nullptr)
-                    return false;
-            }
-
-            return true;
+            throw std::runtime_error("Unknown type in message variant");
         }
 
-        void printQueue() {
-            for (const auto &el : circularQueue) {
-                if (el == nullptr)
-                    continue;
 
-                std::cout << *el << " ";
-            }
-            std::cout << std::endl;
+        void setMessage(std::unique_ptr<int []> message) {
+            this->message = std::move(message);
+        }
+
+        void setMessage(std::unique_ptr<char []> message) {
+            this->message = std::move(message);
+        }
+
+        void setMessage(std::unique_ptr<double []> message) {
+            this->message = std::move(message);
+        }
+
+        void setMessage(std::unique_ptr<int> message) {
+            this->message = std::move(message);
+        }
+
+        void setMessage(std::unique_ptr<char> message) {
+            this->message = std::move(message);
+        }
+
+        void setMessage(std::unique_ptr<double> message) {
+            this->message = std::move(message);
         }
 };
 
 int main() {
-    MyCircularQueue temp(3);
 
-    std::cout << temp.Rear() << std::endl;
-    std::cout << temp.enQueue(2) << std::endl;
-    std::cout << temp.enQueue(3) << std::endl;
-    std::cout << temp.enQueue(4) << std::endl;
-    std::cout << temp.Rear() << std::endl;
-    std::cout << temp.isFull() << std::endl;
-    std::cout << temp.deQueue() << std::endl;
-    std::cout << temp.enQueue(4) << std::endl;
+    const char *message = "WUBBA BUBBA LUBBA NUBBA";
+    
+    int temp = sizeof(message);
+
+    std::cout << temp << std::endl;
+
+    
 
     return 0;
 }
